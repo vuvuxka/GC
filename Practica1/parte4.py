@@ -17,4 +17,3 @@ ax.set_aspect('equal')
 start = CreatePoints(fig, ax)
 
 plt.show()
-#end = CreatePoints(fig,ax, "b")

@@ -20,8 +20,6 @@ class CreatePoints(object):
     
     def __init__(self, fig, ax):
         self.circle_list = []
-        self.clase_1 = 0
-        self.clase_2 = 0
 
         self.x0 = None
         self.y0 = None
@@ -38,16 +36,13 @@ class CreatePoints(object):
 
         self.press_event = None
         self.current_circle = None
-        self.line = None
+        self.proyec = None
+        self.separ = None
+        self.X = np.zeros((0,2))
+        self.t = np.zeros((2,0))
 
     def on_press(self, event):
-#        if event.button == 3:
-#            self.fig.canvas.mpl_disconnect(self.cidpress)
-#            self.fig.canvas.mpl_disconnect(self.cidrelease)
-#            self.fig.canvas.mpl_disconnect(self.cidmove)
-#            points = [circle.center for circle in self.circle_list]
-#            print("Pues tenías razon")
-#            return points
+
 
         x0, y0 = event.xdata, event.ydata
         for circle in self.circle_list:
@@ -57,22 +52,17 @@ class CreatePoints(object):
                 self.current_circle = circle
                 self.x0, self.y0 = self.current_circle.center
                 return
-        p = np.array([x0,y0])
             
         if event.button == 3:
             c = Circle((x0, y0), 0.5, fc="r")
             self.circle_list.append(c)
-            if isinstance(self.clase_2, np.ndarray):
-                self.clase_2 = np.c_[self.clase_2,np.array([x0,y0])]
-            else:
-                self.clase_2 = np.array([[x0],[y0]])
+            self.X = np.r_[self.X,np.array([[x0,y0]])]
+            self.t = np.c_[self.t,np.array([0,1]).T]
         else:
             c = Circle((x0, y0), 0.5, fc="b")
             self.circle_list.append(c)
-            if isinstance(self.clase_1, np.ndarray):
-                self.clase_1 = np.c_[self.clase_1,np.array([x0,y0])]
-            else:
-                self.clase_1 = np.array([[x0],[y0]])
+            self.X = np.r_[self.X,np.array([[x0,y0]])]
+            self.t = np.c_[self.t,np.array([1,0])]
         self.ax.add_patch(c)
         self.current_circle = None
         self.fig.canvas.draw()
@@ -80,34 +70,7 @@ class CreatePoints(object):
     def on_release(self, event):
         self.press_event = None
         self.current_circle = None
-        t1 = 0
-        t2 = 0
-        if isinstance(self.clase_1, np.ndarray):
-            t1 = len(self.clase_1[1,:])
-        if isinstance(self.clase_2, np.ndarray):
-            t2 = len(self.clase_2[1,:])
-        t = np.c_[np.r_[np.ones(t1), np.zeros(t2)], np.r_[np.zeros(t1), np.ones(t2)]].T
-        if not isinstance(self.clase_1, np.ndarray):
-            X = self.clase_2
-        elif not isinstance(self.clase_2, np.ndarray):
-            X = self.clase_1
-        else:
-            X = np.concatenate((self.clase_1, self.clase_2), axis=1)
-        w = lda(X.T,t)
-        if not isinstance(w,np.ndarray):
-            return
-        a = w[0]
-        b = w[1]
-        ## Plot functions and a point where they intersect
-        l =  Line2D((-20,20),((-20)*a+b,(20)*a+b))
-        if self.line == None:
-            self.line = l
-            self.ax.add_line(self.line)
-            print("en no")
-        else: 
-            print("en si")
-            self.ax.get_lines()[0].set_data((-20,20),((-20)*a+b,(20)*a+b))
-        self.fig.canvas.draw()
+        self.actualizar()
         
         
 
@@ -121,16 +84,34 @@ class CreatePoints(object):
         dy = event.ydata - self.press_event.ydata
         self.current_circle.center = self.x0 + dx, self.y0 + dy
         self.fig.canvas.draw()
+        self.actualizar()
+    
+    def actualizar(self):
+        w,c = lda(self.X,self.t)
+        if not isinstance(w,np.ndarray):
+            return
+        a = w[0]
+        b = w[1]
+        c1 = c[0]
+        c2 = c[1]
+        ## Plot functions and a point where they intersect
+#        l1 =  Line2D((-20,20),((-20)*b/a,(20)*b/a))
+#        if self.proyec == None:
+#            self.proyec = l1
+#            self.ax.add_line(self.proyec)
+#        else: 
+#            self.ax.get_lines()[0].set_data((-20,20),((-20)*b/a,(20)*b/a))
+        
+        k = a*c1 + b*c2
+        l2 =  Line2D((-20,20),((k-a*(-20))/b,(k-a*(20))/b), c="g")
+        
+        if self.separ == None:
+            self.separ = l2
+            self.ax.add_line(self.separ)
+        else: 
+            self.ax.get_lines()[0].set_data((-20,20),((k-a*(-20))/b,(k-a*(20))/b))
+        
+        self.fig.canvas.draw()
 
 
 
-#QUITAR
-fig = plt.figure()
-ax = plt.subplot(111)
-ax.set_xlim(-20, 20)
-ax.set_ylim(-20, 20)
-ax.set_aspect('equal')  
-
-start = CreatePoints(fig, ax)
-
-plt.show()
